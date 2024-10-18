@@ -4,28 +4,28 @@ import requests
 from selenium import webdriver
 
 # Function to handle price extraction based on user input
-def get_price_data(prices_with_vendors, choice):
-    # Filter and convert valid price values
-    prices = []
-    for price, vendor in prices_with_vendors:
+def get_price_data(row, choice):
+    # Filter and convert valid price values while keeping track of vendors
+    prices_with_vendors = []
+    for price, vendor in row:  # Unpack the tuple
         try:
             # Attempt to convert the price to float, ignoring non-numeric values
-            prices.append(float(price))
+            prices_with_vendors.append((float(price), vendor))  # Tuple of (price, vendor)
         except ValueError:
-            # Ignore any non-numeric values (like vendor names)
+            # Ignore any non-numeric values
             continue
 
-    # Sort the prices
-    prices = sorted(prices)
+    # Sort the prices by the first element (price value)
+    prices_with_vendors.sort(key=lambda x: x[0])
 
     # Get the 3 lowest, median, or highest prices based on user input
     if choice == 'Low':
-        return prices[:3]  # 3 lowest prices
+        return prices_with_vendors[:3]  # 3 lowest prices
     elif choice == 'Med':
-        median_idx = len(prices) // 2
-        return prices[median_idx-1:median_idx+2]  # 3 median prices
+        median_idx = len(prices_with_vendors) // 2
+        return prices_with_vendors[median_idx-1:median_idx+2]  # 3 median prices
     elif choice == 'High':
-        return prices[-3:]  # 3 highest prices
+        return prices_with_vendors[-3:]  # 3 highest prices
 
 # Function to process the CSV
 def process_csv(input_csv, output_csv):
@@ -52,30 +52,41 @@ def process_csv(input_csv, output_csv):
     for index in range(2, len(df)):
         row = df.iloc[index]
 
+        # Extract the MPN for the current row (index 2 and below)
+        current_mpn = df.iloc[index, mpn_col_index]
+
         # Assuming prices are in columns AH-AQ (indices 33-42) for this row
         prices = row.iloc[33:43].tolist()  # Price columns (adjust indices as needed)
 
-        # Pair prices with their respective vendors
+        # Pair prices with their respective vendors, removing NaN values
         prices_with_vendors = []
         for vendor, price in zip(vendor_names, prices):
-            try:
-                # Convert price to float and keep the vendor association
-                prices_with_vendors.append((float(price), vendor))
-            except ValueError:
-                # Ignore non-numeric values (but still keep valid vendor-price pairs)
-                continue
+            if pd.notna(price):  # Only process if the price is not NaN
+                try:
+                    # Convert price to float and keep the vendor association
+                    prices_with_vendors.append((float(price), vendor))  # Tuple of (price, vendor)
+                except ValueError:
+                    # Ignore non-numeric values (but still keep valid vendor-price pairs)
+                    continue
 
         # Get the relevant price data (with vendor names) based on the user's choice
         selected_prices = get_price_data(prices_with_vendors, choice)
 
-        # Add the selected prices and vendor information to the output row
-        output_row = [mpn] + [f"{vendor}: {price}" for price, vendor in prices_with_vendors if price in selected_prices]
+        # Ensure the output row has three slots (fill missing ones with blanks)
+        output_row = [current_mpn]
+        for i in range(3):  # Ensure 3 slots for prices
+            if i < len(selected_prices):
+                price, vendor = selected_prices[i]
+                output_row.append(f"{vendor}: ${price:.2f}")
+            else:
+                output_row.append("")  # Add blank if no price available
+
         output_data.append(output_row)
 
         # Follow URLs and take screenshots (functionality to be implemented)
-        for i, (price, vendor) in enumerate(prices_with_vendors[:3]):
+        for i, (price, vendor) in enumerate(selected_prices[:3]):
             if i < len(url_names) and pd.notna(url_names[i]):  # Check if a URL exists for the vendor
-                screenshot_filename = f"{mpn}_Quote_{vendor}_{choice.capitalize()}.jpg"
+                screenshot_filename = f"{current_mpn}_Quote_{vendor}_{choice.capitalize()}.jpg"
                 # Screenshot logic placeholder
                 print(f"Taking screenshot of {url_names[i]} and saving as {screenshot_filename}")
                 # take_screenshot(url_names[i], screenshot_filename)  # Uncomment if screenshot logic is implemented
@@ -90,5 +101,3 @@ def process_csv(input_csv, output_csv):
 input_csv = 'C:/Users/Zach.Gunter/Documents/GitHub/CymSTARQuoteParsing/TestQuote.csv'
 output_csv = 'path_to_output.csv'
 process_csv(input_csv, output_csv)
-
-#First Commit
