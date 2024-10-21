@@ -27,7 +27,7 @@ def get_price_data(row, choice):
 
 
 # Function to process the CSV and create individual CSVs for each vendor, and a master CSV
-def process_csv(input_csv, master_output_csv, screenshot_dir):
+def process_csv(input_csv, master_output_csv):
     df = pd.read_csv(input_csv, header=None)  # Load without headers since we need specific rows
 
     # Extract MPN from Row 1, Column 4 (index 3)
@@ -39,7 +39,7 @@ def process_csv(input_csv, master_output_csv, screenshot_dir):
 
     output_data_master = []  # To store data for the master CSV
 
-    choice = input("Do you want to see the 3 Lowest, Median, or Highest prices? (Type 'Low', 'Med', or 'High'): ")
+    choice = input("Do you want to see the 3 Lowest, Median, or Highest prices? (Type 'Low', 'Med', or 'High'): ").capitalize()
 
     for index in range(2, len(df)):
         row = df.iloc[index]
@@ -108,6 +108,5 @@ master_output_csv = 'C:/Users/Zach.Gunter/Documents/GitHub/CymSTARQuoteParsing/O
 screenshot_dir = 'C:/Users/Zach.Gunter/Documents/GitHub/CymSTARQuoteParsing/Screenshots'
 
 # Create the screenshots directory if it doesn't exist
-os.makedirs(screenshot_dir, exist_ok=True)
 
-process_csv(input_csv, master_output_csv, screenshot_dir)
+process_csv(input_csv, master_output_csv)
